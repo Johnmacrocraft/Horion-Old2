@@ -204,10 +204,5 @@
     <ClInclude Include="Horion\Module\Modules\NameTags.h" />
     <ClInclude Include="SDK\CComplexInventoryTransaction.h" />
     <ClInclude Include="SDK\CInventoryTransaction.h" />
-    <ClInclude Include="include\chakra\ChakraCore.h" />
-    <ClInclude Include="include\chakra\ChakraCommon.h" />
-    <ClInclude Include="include\chakra\ChakraDebug.h" />
-    <ClInclude Include="include\chakra\ChakraCommonWindows.h" />
-    <ClInclude Include="include\chakra\ChakraCoreWindows.h" />
   </ItemGroup>
 </Project>

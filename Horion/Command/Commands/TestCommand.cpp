@@ -1,19 +1,5 @@
 #include "TestCommand.h"
 
-#define DECL_API(f) decltype(f)* f##_ = _dll[#f]
-
-class ChakraApi {
-	DllHelper _dll{ "Chakra.dll" };
-
-public:
-	DECL_API(JsCreateRuntime);
-	DECL_API(JsCreateContext);
-	DECL_API(JsSetCurrentContext);
-	DECL_API(JsDisposeRuntime);
-	DECL_API(JsRunScript);
-	DECL_API(JsConvertValueToString);
-	DECL_API(JsStringToPointer);
-};
 
 TestCommand::TestCommand() : IMCCommand("test", "Test for Debugging purposes", "")
 {
@@ -24,43 +10,40 @@ TestCommand::~TestCommand()
 {
 }
 
-ChakraApi chakra;
-
 bool TestCommand::execute(std::vector<std::string>* args)
 {
-	JsRuntimeHandle runtime;
-	JsContextRef context;
-	JsValueRef result;
-	unsigned currentSourceContext = 0;
+	C_PlayerInventoryProxy* supplies = g_Data.getLocalPlayer()->getSupplies();
+	C_Inventory* inv = supplies->inventory;
 
-	// Your script; try replace hello-world with something else
-	std::wstring script = L"(()=>{return \'Hello world!\';})()";
+	C_MobEquipmentPacket* mob = new C_MobEquipmentPacket(g_Data.getLocalPlayer()->entityRuntimeId, *inv->getItemStack(5)
+		, 5, 5);
 
-	// Create a runtime. 
-	chakra.JsCreateRuntime_(JsRuntimeAttributeNone, nullptr, &runtime);
+	g_Data.getClientInstance()->loopbackPacketSender->sendToServer(mob);
 
-	// Create an execution context. 
-	chakra.JsCreateContext_(runtime, &context);
+	C_ItemUseInventoryTransaction* complexTransaction = new C_ItemUseInventoryTransaction();
+	C_InventoryTransactionPacket* packet = new C_InventoryTransactionPacket();
 
-	// Now set the current execution context.
-	chakra.JsSetCurrentContext_(context);
+	complexTransaction->pos = *g_Data.getLocalPlayer()->getPos();
+	complexTransaction->slot = 5;
+	complexTransaction->blockSide = g_Data.getLocalPlayer()->pointingAt->blockSide;
+	complexTransaction->blockPos = g_Data.getLocalPlayer()->pointingAt->block;
 
-	// Run the script.
-	chakra.JsRunScript_(script.c_str(), currentSourceContext++, L"", &result);
+	complexTransaction->item = *inv->getItemStack(5);
 
-	// Convert your script result to String in JavaScript; redundant if your script returns a String
-	JsValueRef resultJSString;
-	chakra.JsConvertValueToString_(result, &resultJSString);
+	packet->complexTransaction = complexTransaction;
 
-	// Project script result back to C++.
-	const wchar_t* resultWC;
-	size_t stringLength;
-	chakra.JsStringToPointer_(resultJSString, &resultWC, &stringLength);
-	
-	clientMessageF("Result: %S", resultWC);
+	g_Data.getClientInstance()->loopbackPacketSender->sendToServer(packet);
 
-	// Dispose runtime
-	chakra.JsSetCurrentContext_(JS_INVALID_REFERENCE);
-	chakra.JsDisposeRuntime_(runtime);
+
+	delete packet;
+	delete mob;
+
+	mob = new C_MobEquipmentPacket(g_Data.getLocalPlayer()->entityRuntimeId,
+		*inv->getItemStack(supplies->selectedHotbarSlot)
+		, supplies->selectedHotbarSlot, supplies->selectedHotbarSlot);
+
+	g_Data.getClientInstance()->loopbackPacketSender->sendToServer(mob);
+
+	delete mob;
 	return true;
 }
